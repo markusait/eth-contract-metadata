@@ -1,67 +1,73 @@
-# Ethereum Contract Metadata [![CircleCI](https://circleci.com/gh/MetaMask/eth-contract-metadata.svg?style=svg)](https://circleci.com/gh/MetaMask/eth-contract-metadata)
+# MetaMask Browser Extension
 
-[![Greenkeeper badge](https://badges.greenkeeper.io/MetaMask/eth-contract-metadata.svg)](https://greenkeeper.io/)
+Hey! We are hiring JavaScript Engineers! [Apply here](https://boards.greenhouse.io/consensys/jobs/2572388)!
+---
 
-A mapping of checksummed ethereum addresses to metadata, like names, and images of those addresses' logos.
+You can find the latest version of MetaMask on [our official website](https://metamask.io/). For help using MetaMask, visit our [User Support Site](https://metamask.zendesk.com/hc/en-us).
 
-All address keys follow the [EIP 55 address checksum format](https://github.com/ethereum/EIPs/issues/55).
+For [general questions](https://metamask.zendesk.com/hc/en-us/community/topics/360000682532-General), [feature requests](https://metamask.zendesk.com/hc/en-us/community/topics/360000682552-Feature-Requests-Ideas), or [developer questions](https://metamask.zendesk.com/hc/en-us/community/topics/360001751291-Developer-Questions), visit our [Community Forum](https://metamask.zendesk.com/hc/en-us/community/topics).
 
-Submit PRs to add valid logos, and obviously valid logos will be merged.
+MetaMask supports Firefox, Google Chrome, and Chromium-based browsers. We recommend using the latest available browser version.
 
-## Usage
+For up to the minute news, follow our [Twitter](https://twitter.com/metamask_io) or [Medium](https://medium.com/metamask) pages.
 
-You can install from npm with `npm install eth-contract-metadata` and use it in your code like this:
+To learn how to develop MetaMask-compatible applications, visit our [Developer Docs](https://metamask.github.io/metamask-docs/).
 
-```javascript
-const contractMap = require('eth-contract-metadata')
-const toChecksumAddress = require('ethereumjs-util').toChecksumAddress
+To learn how to contribute to the MetaMask project itself, visit our [Internal Docs](https://github.com/MetaMask/metamask-extension/tree/develop/docs).
 
-function imageElFor (address) {
-  const metadata = iconMap[toChecksumAddress(address)]
-  if (!('logo' in metadata)) {
-    return false
-  }
-  const fileName = metadata.logo
-  const path = `images/contract/${fileName}`
-  const img = document.createElement('img')
-  img.src = path
-  img.style.width = '100%'
-  return img
-}
+## Building locally
+
+- Install [Node.js](https://nodejs.org) version 10
+    - If you are using [nvm](https://github.com/creationix/nvm#installation) (recommended) running `nvm use` will automatically choose the right node version for you.
+- Install [Yarn](https://yarnpkg.com/en/docs/install)
+- Install dependencies: `yarn`
+- Copy the `.metamaskrc.dist` file to `.metamaskrc`
+    - Replace the `INFURA_PROJECT_ID` value with your own personal [Infura Project ID](https://infura.io/docs).
+    - If debugging MetaMetrics, you'll need to add a value for `SEGMENT_WRITE_KEY` [Segment write key](https://segment.com/docs/connections/find-writekey/).
+- Build the project to the `./dist/` folder with `yarn dist`.
+- Optionally, to start a development build (e.g. with logging and file watching) run `yarn start` instead.
+    - To start the [React DevTools](https://github.com/facebook/react-devtools) and [Redux DevTools Extension](http://extension.remotedev.io)
+      alongside the app, use `yarn start:dev`.
+      - React DevTools will open in a separate window; no browser extension is required
+      - Redux DevTools will need to be installed as a browser extension. Open the Redux Remote Devtools to access Redux state logs. This can be done by either right clicking within the web browser to bring up the context menu, expanding the Redux DevTools panel and clicking Open Remote DevTools OR clicking the Redux DevTools extension icon and clicking Open Remote DevTools.
+        - You will also need to check the "Use custom (local) server" checkbox in the Remote DevTools Settings, using the default server configuration (host `localhost`, port `8000`, secure connection checkbox unchecked)
+
+Uncompressed builds can be found in `/dist`, compressed builds can be found in `/builds` once they're built.
+
+## Contributing
+
+### Running Tests
+
+Run tests with `yarn test`.
+
+You can also test with a continuously watching process, via `yarn watch`.
+
+You can run the linter by itself with `yarn lint`.
+
+## Architecture
+
+[![Architecture Diagram](./docs/architecture.png)][1]
+
+## Development
+
+```bash
+yarn
+yarn start
 ```
 
-## Submission Process
+## Build for Publishing
 
-Maintaining this list is a considerable chore, and it is not our highest priority. We do not guarantee inclusion in this list on any urgent timeline. We are actively looking for fair and safe ways to maintain a list like this in a decentralized way, because maintaining it is a large and security-delicate task.
-
-1. Fork this repository.
-2. Add your logo image in a web-safe format to the `images` folder.
-3. Add an entry to the `contract-map.json` file with the specified address as the key, and the image file's name as the value.
-
-Criteria:
-- The icon should be small, square, but high resolution, ideally a vector/svg.
-- Do not add your entry to the end of the JSON map, messing with the trailing comma. Your pull request should only be an addition of lines, and any line removals should be deliberate deprecations of those logos.
-- PR should include link to official project website referencing the suggested address.
-- Project website should include explanation of project.
-- Project should have clear signs of activity, either traffic on the network, activity on GitHub, or community buzz.
-- Nice to have a verified source code on a block explorer like Etherscan.
-- Must have a ['NEUTRAL' reputation or 'OK' reputation](https://etherscancom.freshdesk.com/support/solutions/articles/35000022146-etherscan-token-reputation-system) on Etherscan.
-
-A sample submission:
-
-```json
-{
-  "0x6090A6e47849629b7245Dfa1Ca21D94cd15878Ef": {
-    "name": "ENS Registrar",
-    "logo": "ens.svg"
-  }
-}
+```bash
+yarn dist
 ```
 
-Tokens should include a field `"erc20": true`, and can include additional fields:
+## Other Docs
 
-- symbol (a five-character or less ticker symbol)
-- decimals (precision of the tokens stored)
+- [How to add custom build to Chrome](./docs/add-to-chrome.md)
+- [How to add custom build to Firefox](./docs/add-to-firefox.md)
+- [How to add a new translation to MetaMask](./docs/translating-guide.md)
+- [Publishing Guide](./docs/publishing.md)
+- [How to use the TREZOR emulator](./docs/trezor-emulator.md)
+- [How to generate a visualization of this repository's development](./development/gource-viz.sh)
 
-A full list of permitted fields can be found in the [permitted-fields.json](./permitted-fields.json) file.
-
+[1]: http://www.nomnoml.com/#view/%5B%3Cactor%3Euser%5D%0A%0A%5Bmetamask-ui%7C%0A%20%20%20%5Btools%7C%0A%20%20%20%20%20react%0A%20%20%20%20%20redux%0A%20%20%20%20%20thunk%0A%20%20%20%20%20ethUtils%0A%20%20%20%20%20jazzicon%0A%20%20%20%5D%0A%20%20%20%5Bcomponents%7C%0A%20%20%20%20%20app%0A%20%20%20%20%20account-detail%0A%20%20%20%20%20accounts%0A%20%20%20%20%20locked-screen%0A%20%20%20%20%20restore-vault%0A%20%20%20%20%20identicon%0A%20%20%20%20%20config%0A%20%20%20%20%20info%0A%20%20%20%5D%0A%20%20%20%5Breducers%7C%0A%20%20%20%20%20app%0A%20%20%20%20%20metamask%0A%20%20%20%20%20identities%0A%20%20%20%5D%0A%20%20%20%5Bactions%7C%0A%20%20%20%20%20%5BbackgroundConnection%5D%0A%20%20%20%5D%0A%20%20%20%5Bcomponents%5D%3A-%3E%5Bactions%5D%0A%20%20%20%5Bactions%5D%3A-%3E%5Breducers%5D%0A%20%20%20%5Breducers%5D%3A-%3E%5Bcomponents%5D%0A%5D%0A%0A%5Bweb%20dapp%7C%0A%20%20%5Bui%20code%5D%0A%20%20%5Bweb3%5D%0A%20%20%5Bmetamask-inpage%5D%0A%20%20%0A%20%20%5B%3Cactor%3Eui%20developer%5D%0A%20%20%5Bui%20developer%5D-%3E%5Bui%20code%5D%0A%20%20%5Bui%20code%5D%3C-%3E%5Bweb3%5D%0A%20%20%5Bweb3%5D%3C-%3E%5Bmetamask-inpage%5D%0A%5D%0A%0A%5Bmetamask-background%7C%0A%20%20%5Bprovider-engine%5D%0A%20%20%5Bhooked%20wallet%20subprovider%5D%0A%20%20%5Bid%20store%5D%0A%20%20%0A%20%20%5Bprovider-engine%5D%3C-%3E%5Bhooked%20wallet%20subprovider%5D%0A%20%20%5Bhooked%20wallet%20subprovider%5D%3C-%3E%5Bid%20store%5D%0A%20%20%5Bconfig%20manager%7C%0A%20%20%20%20%5Brpc%20configuration%5D%0A%20%20%20%20%5Bencrypted%20keys%5D%0A%20%20%20%20%5Bwallet%20nicknames%5D%0A%20%20%5D%0A%20%20%0A%20%20%5Bprovider-engine%5D%3C-%5Bconfig%20manager%5D%0A%20%20%5Bid%20store%5D%3C-%3E%5Bconfig%20manager%5D%0A%5D%0A%0A%5Buser%5D%3C-%3E%5Bmetamask-ui%5D%0A%0A%5Buser%5D%3C%3A--%3A%3E%5Bweb%20dapp%5D%0A%0A%5Bmetamask-contentscript%7C%0A%20%20%5Bplugin%20restart%20detector%5D%0A%20%20%5Brpc%20passthrough%5D%0A%5D%0A%0A%5Brpc%20%7C%0A%20%20%5Bethereum%20blockchain%20%7C%0A%20%20%20%20%5Bcontracts%5D%0A%20%20%20%20%5Baccounts%5D%0A%20%20%5D%0A%5D%0A%0A%5Bweb%20dapp%5D%3C%3A--%3A%3E%5Bmetamask-contentscript%5D%0A%5Bmetamask-contentscript%5D%3C-%3E%5Bmetamask-background%5D%0A%5Bmetamask-background%5D%3C-%3E%5Bmetamask-ui%5D%0A%5Bmetamask-background%5D%3C-%3E%5Brpc%5D%0A

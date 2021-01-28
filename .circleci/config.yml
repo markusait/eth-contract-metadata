@@ -19,22 +19,362 @@ jobs:
           root: .
           paths:
           - node_modules
+          - build-artifacts
 
-  test-unit:
-    <<: *defaults
-    docker:
-      - image: circleci/node:9
+  prep-build:
+    executor: node-browsers-medium-plus
     steps:
       - checkout
       - attach_workspace:
           at: .
-      - run: npm test
+      - run:
+          name: build:dist
+          command: yarn dist
+      - run:
+          name: build:debug
+          command: find dist/ -type f -exec md5sum {} \; | sort -k 2
+      - persist_to_workspace:
+          root: .
+          paths:
+            - dist
+            - builds
 
-workflows:
-  version: 2
-  ful_test:
-    jobs:
-      - prep-deps
-      - test-unit:
-          requires:
-            - prep-deps
+  prep-build-test:
+    executor: node-browsers-medium-plus
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Build extension for testing
+          command: yarn build:test
+      - run:
+          name: Move test build to 'dist-test' to avoid conflict with production build
+          command: mv ./dist ./dist-test
+      - run:
+          name: Move test zips to 'builds-test' to avoid conflict with production build
+          command: mv ./builds ./builds-test
+      - persist_to_workspace:
+          root: .
+          paths:
+            - dist-test
+            - builds-test
+
+  prep-build-test-metrics:
+    executor: node-browsers-medium-plus
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Build extension for testing metrics
+          command: yarn build:test:metrics
+      - run:
+          name: Move test build to 'dist-test-metrics' to avoid conflict with production build
+          command: mv ./dist ./dist-test-metrics
+      - run:
+          name: Move test zips to 'builds-test' to avoid conflict with production build
+          command: mv ./builds ./builds-test-metrics
+      - persist_to_workspace:
+          root: .
+          paths:
+            - dist-test-metrics
+            - builds-test-metrics
+
+  prep-build-storybook:
+    executor: node-browsers
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Build Storybook
+          command: yarn storybook:build
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .out
+
+  test-lint:
+    executor: node-browsers
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Lint
+          command: yarn lint
+      - run:
+          name: Verify locales
+          command: yarn verify-locales --quiet
+
+  test-lint-shellcheck:
+    executor: shellcheck
+    steps:
+      - checkout
+      - run: apk add --no-cache bash jq yarn
+      - run:
+          name: ShellCheck Lint
+          command: ./development/shellcheck.sh
+
+  test-lint-lockfile:
+    executor: node-browsers
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: lockfile-lint
+          command: yarn lint:lockfile
+
+  test-deps:
+    executor: node-browsers
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: yarn audit
+          command: .circleci/scripts/yarn-audit
+
+  test-e2e-chrome:
+    executor: node-browsers
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Move test build to dist
+          command: mv ./dist-test ./dist
+      - run:
+          name: Move test zips to builds
+          command: mv ./builds-test ./builds
+      - run:
+          name: test:e2e:chrome
+          command: |
+            if .circleci/scripts/test-run-e2e
+            then
+              yarn test:e2e:chrome
+            fi
+          no_output_timeout: 20m
+      - store_artifacts:
+          path: test-artifacts
+          destination: test-artifacts
+
+  test-e2e-chrome-metrics:
+    executor: node-browsers
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Move test build to dist
+          command: mv ./dist-test-metrics ./dist
+      - run:
+          name: Move test zips to builds
+          command: mv ./builds-test-metrics ./builds
+      - run:
+          name: test:e2e:chrome:metrics
+          command: |
+            if .circleci/scripts/test-run-e2e
+            then
+              yarn test:e2e:chrome:metrics
+            fi
+          no_output_timeout: 20m
+      - store_artifacts:
+          path: test-artifacts
+          destination: test-artifacts
+
+  test-e2e-firefox:
+    executor: node-browsers
+    steps:
+      - checkout
+      - run:
+          name: Install Firefox
+          command: ./.circleci/scripts/firefox-install
+      - attach_workspace:
+          at: .
+      - run:
+          name: Move test build to dist
+          command: mv ./dist-test ./dist
+      - run:
+          name: Move test zips to builds
+          command: mv ./builds-test ./builds
+      - run:
+          name: test:e2e:firefox
+          command: |
+            if .circleci/scripts/test-run-e2e
+            then
+              yarn test:e2e:firefox
+            fi
+          no_output_timeout: 20m
+      - store_artifacts:
+          path: test-artifacts
+          destination: test-artifacts
+
+  test-e2e-firefox-metrics:
+    executor: node-browsers
+    steps:
+      - checkout
+      - run:
+          name: Install Firefox
+          command: ./.circleci/scripts/firefox-install
+      - attach_workspace:
+          at: .
+      - run:
+          name: Move test build to dist
+          command: mv ./dist-test-metrics ./dist
+      - run:
+          name: Move test zips to builds
+          command: mv ./builds-test-metrics ./builds
+      - run:
+          name: test:e2e:firefox:metrics
+          command: |
+            if .circleci/scripts/test-run-e2e
+            then
+              yarn test:e2e:firefox:metrics
+            fi
+          no_output_timeout: 20m
+      - store_artifacts:
+          path: test-artifacts
+          destination: test-artifacts
+
+  benchmark:
+    executor: node-browsers
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Move test build to dist
+          command: mv ./dist-test ./dist
+      - run:
+          name: Move test zips to builds
+          command: mv ./builds-test ./builds
+      - run:
+          name: Run page load benchmark
+          command: yarn benchmark:chrome --out test-artifacts/chrome/benchmark/pageload.json
+      - store_artifacts:
+          path: test-artifacts
+          destination: test-artifacts
+      - persist_to_workspace:
+          root: .
+          paths:
+            - test-artifacts
+
+  job-publish-prerelease:
+    executor: node-browsers
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: build:source-map-explorer
+          command: ./development/source-map-explorer.sh
+      - store_artifacts:
+          path: dist/sourcemaps
+          destination: builds/sourcemaps
+      - store_artifacts:
+          path: builds
+          destination: builds
+      - store_artifacts:
+          path: coverage
+          destination: coverage
+      - store_artifacts:
+          path: test-artifacts
+          destination: test-artifacts
+      # important: generate sesify viz AFTER uploading builds as artifacts
+      # Temporarily disabled until we can update to a version of `sesify` with
+      # this fix included: https://github.com/LavaMoat/LavaMoat/pull/121
+      # - run:
+      #     name: build:sesify-viz
+      #     command: ./.circleci/scripts/create-sesify-viz
+      - store_artifacts:
+          path: build-artifacts
+          destination: build-artifacts
+      - run:
+          name: build:announce
+          command: ./development/metamaskbot-build-announce.js
+
+  job-publish-release:
+    executor: node-browsers
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: sentry sourcemaps upload
+          command: yarn sentry:publish
+      - run:
+          name: Create GitHub release
+          command: |
+            .circleci/scripts/release-create-gh-release
+      - run:
+          name: Create GitHub Pull Request to sync master with develop
+          command: .circleci/scripts/release-create-master-pr
+
+  job-publish-storybook:
+    executor: node-browsers
+    steps:
+      - add_ssh_keys:
+          fingerprints:
+            - "5e:a3:2d:35:b6:25:b5:87:b1:41:11:0d:77:50:96:73"
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: storybook:deploy
+          command: |
+            git remote add storybook git@github.com:MetaMask/metamask-storybook.git
+            yarn storybook:deploy
+
+  test-unit:
+    executor: node-browsers
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: test:coverage
+          command: yarn test:coverage
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .nyc_output
+            - coverage
+  test-unit-global:
+    executor: node-browsers
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: test:unit:global
+          command: yarn test:unit:global
+
+  validate-source-maps:
+    executor: node-browsers
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Validate source maps
+          command: yarn validate-source-maps
+
+  test-mozilla-lint:
+    executor: node-browsers
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: test:mozilla-lint
+          command: NODE_OPTIONS=--max_old_space_size=3072 yarn mozilla-lint
+
+  all-tests-pass:
+    executor: node-browsers
+    steps:
+      - run:
+          name: All Tests Passed
+          command: echo 'weew - everything passed!'
